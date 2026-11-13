@@ -11,7 +11,6 @@ import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.GraphicsEnvironment;
-//import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.event.MouseAdapter;
@@ -26,9 +25,8 @@ public class Face extends JFrame
     private static final int WINDOW_HEIGHT = 240;
 
     private static final int MARGIN_RIGHT = 5;
-    private static final int MARGIN_BOTTOM = 40;
+    private static final int MARGIN_TOP = 40;
 
-    //private Point dragOffset;
 
     public Face()
     {
@@ -44,7 +42,6 @@ public class Face extends JFrame
         pack();
 
         moveToCorner();
-        //enableDragging(panel);
         enableRightClickClose(panel);
     }
 
@@ -55,35 +52,10 @@ public class Face extends JFrame
             .getMaximumWindowBounds();
 
         int x = area.x + area.width - getWidth() - MARGIN_RIGHT;
-        int y = area.y + MARGIN_BOTTOM;
+        int y = area.y + MARGIN_TOP;
 
         setLocation(x, y);
     }
-
-    /*private void enableDragging(JPanel panel)
-    {
-        MouseAdapter drag = new MouseAdapter()
-        {
-            @Override
-            public void mousePressed(MouseEvent e)
-            {
-                dragOffset = e.getPoint();
-            }
-
-            @Override
-            public void mouseDragged(MouseEvent e)
-            {
-                if (dragOffset == null)
-                {
-                    return;
-                }
-                Point onScreen = e.getLocationOnScreen();
-                setLocation(onScreen.x - dragOffset.x, onScreen.y - dragOffset.y);
-            }
-        };
-        panel.addMouseListener(drag);
-        panel.addMouseMotionListener(drag);
-    }*/
 
     private void enableRightClickClose(JPanel panel)
     {

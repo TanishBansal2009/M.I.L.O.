@@ -1,12 +1,10 @@
-import atexit
 import os
 
 from google import genai
 from google.genai import types
 
-from config.settings import GEMINI_API_KEY, GEMINI_MODEL, GEMINI_LOOKUP_MODEL, USER_NAME, MILO_SYSTEM_INSTRUCTION, SHOW_FACE
-from interfaces.face import show_face, hide_face
-from interfaces.text_io import milo_speak, milo_speak_stream, get_user_input, ask_yes_no
+from config.settings import GEMINI_API_KEY, GEMINI_MODEL, GEMINI_LOOKUP_MODEL, USER_NAME, MILO_SYSTEM_INSTRUCTION
+from skills.memory import Memory, try_handle_memory
 from skills.open_website import try_handle_open_site
 from skills.search import try_handle_search
 from skills.time_date import try_handle_time_date
@@ -34,6 +32,8 @@ def try_skills(skills: list, user_input: str) -> str | None:
 
 
 def remember_skill_action(notes: list, user_input: str, reply: str) -> None:
+    """Skills answer without the chat model, so the chat never sees those
+    messages. We keep a short note and attach it to the next chat message."""
     notes.append(f'The user said "{user_input}" and you handled it yourself, replying "{reply}".')
     del notes[:-3]
 
@@ -45,60 +45,88 @@ def add_skill_context(user_input: str, notes: list) -> str:
     return f"[Background, only mention if relevant: {background}]\n\n{user_input}"
 
 
-def run():
-    client = genai.Client(api_key=GEMINI_API_KEY)
+class Milo:
+    def __init__(self, ui):
+        self.ui = ui
+        self.client = genai.Client(api_key=GEMINI_API_KEY)
+        self.memory = Memory()
+        self.memory_version = self.memory.version
+        self.chat = self.client.chats.create(model=GEMINI_MODEL, config=self.chat_config())
+        self.skill_notes = []
+        self.skills = [
+            ("time_date", lambda text: try_handle_time_date(text)),
+            ("memory", lambda text: try_handle_memory(text, self.memory, ui.ask_yes_no)),
+            ("search", lambda text: try_handle_search(text)),
+            ("open_website", lambda text: try_handle_open_site(text, self.client, GEMINI_LOOKUP_MODEL, ui.ask_yes_no)),
+        ]
 
-    chat = client.chats.create(
-        model=GEMINI_MODEL,
-        config=types.GenerateContentConfig(system_instruction=MILO_SYSTEM_INSTRUCTION),
-    )
+    def chat_config(self):
+        instruction = MILO_SYSTEM_INSTRUCTION + self.memory.as_prompt()
+        return types.GenerateContentConfig(system_instruction=instruction)
 
-    if SHOW_FACE:
-        face_process = show_face()
-        atexit.register(hide_face, face_process)
+    def refresh_chat_if_memory_changed(self) -> None:
+        if self.memory.version == self.memory_version:
+            return
+        self.memory_version = self.memory.version
+        try:
+            self.chat = self.client.chats.create(
+                model=GEMINI_MODEL,
+                config=self.chat_config(),
+                history=self.chat.get_history(curated=True),
+            )
+        except Exception as e:
+            if os.getenv("MILO_DEBUG") == "1":
+                print(f"[debug] could not refresh the chat after a memory change: {type(e).__name__}: {e}")
 
-    skills = [
-        ("time_date", lambda text: try_handle_time_date(text)),
-        ("search", lambda text: try_handle_search(text)),
-        ("open_website", lambda text: try_handle_open_site(text, client, GEMINI_LOOKUP_MODEL, ask_yes_no)),
-    ]
+    def stream_reply(self, prompt: str):
+        for chunk in self.chat.send_message_stream(prompt):
+            if chunk.text:
+                yield chunk.text
 
-    skill_notes = []
-
-    try:
-        milo_speak_stream(
-            chat,
+    def greet(self) -> None:
+        prompt = (
             f"Greet the user named {USER_NAME} in a friendly, playful way, "
-            f"introducing yourself briefly as Milo.",
+            f"introducing yourself briefly as Milo."
         )
-    except Exception as e:
-        milo_speak(f"Hey {USER_NAME}, I'm Milo! (had trouble reaching my brain just now: {e})")
+        try:
+            self.ui.milo_speak_stream(self.stream_reply(prompt))
+        except Exception as e:
+            self.ui.milo_speak(f"Hey {USER_NAME}, I'm Milo! (had trouble reaching my brain just now: {e})")
+
+    def handle(self, user_input: str) -> None:
+        skill_reply = try_skills(self.skills, user_input)
+        if skill_reply is not None:
+            self.ui.milo_speak(skill_reply)
+            remember_skill_action(self.skill_notes, user_input, skill_reply)
+            self.refresh_chat_if_memory_changed()
+            return
+
+        try:
+            prompt = add_skill_context(user_input, self.skill_notes)
+            self.ui.milo_speak_stream(self.stream_reply(prompt))
+            self.skill_notes.clear()
+        except KeyboardInterrupt:
+            self.ui.milo_speak("Okay, I'll stop talking!")
+        except Exception as e:
+            self.ui.milo_speak(f"Hmm, I ran into an issue talking to my brain: {e}")
+
+
+def run(ui) -> None:
+    milo = Milo(ui)
+    milo.greet()
 
     while True:
         try:
-            user_input = get_user_input(USER_NAME)
+            user_input = ui.get_user_input(USER_NAME)
         except (EOFError, KeyboardInterrupt):
-            milo_speak("Alright, catch you later!")
+            ui.milo_speak("Alright, catch you later!")
             break
 
         if not user_input:
             continue
 
         if user_input.lower() in EXIT_WORDS:
-            milo_speak("See you soon! Take care.")
+            ui.milo_speak("See you soon! Take care.")
             break
 
-        skill_reply = try_skills(skills, user_input)
-        if skill_reply is not None:
-            milo_speak(skill_reply)
-            remember_skill_action(skill_notes, user_input, skill_reply)
-            continue
-
-        try:
-            milo_speak_stream(chat, add_skill_context(user_input, skill_notes))
-            skill_notes.clear()
-        except KeyboardInterrupt:
-            print()
-            milo_speak("Okay, I'll stop talking!")
-        except Exception as e:
-            milo_speak(f"Hmm, I ran into an issue talking to my brain: {e}")
+        milo.handle(user_input)
