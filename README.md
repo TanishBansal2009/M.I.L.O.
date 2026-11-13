@@ -162,4 +162,4 @@ M.I.L.O. is an independent hobby project inspired by Baymax from *Big Hero 6*. I
 
 ## License
 
-See the [LICENSE](LICENSE) file.
+See the [LICENSE](LICENSE) file. MIT License.
