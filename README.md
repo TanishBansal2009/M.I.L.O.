@@ -13,7 +13,7 @@ It is built with Python and the Google Gemini API, and the face is a small Java 
 
 ## The story
 
-At 11, I watched *Big Hero 6* and wanted to build a robot like Baymax. Years later I built ZEN, a Jarvis-style assistant with weather, news, reminders and email. The more features I added, the slower it got, so I scrapped most of them and rebuilt it around one idea: be fast and reliable first. That rebuild is M.I.L.O.
+At the age of 11 years, I watched *Big Hero 6* and wanted to build a robot like Baymax. Years later I built [ZEN](https://github.com/TanishBansal2009/ZenithEnhancedNexus.git), a Jarvis-style assistant with weather, news, reminders and email. The more features I added, the slower it got, so I scrapped most of them and rebuilt it around one idea: be fast and reliable first. That rebuild is M.I.L.O.
 
 The long-term goal is an AI that can exist beyond a screen. This repository is the first step.
 
