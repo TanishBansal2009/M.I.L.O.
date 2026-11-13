@@ -73,7 +73,7 @@ You need:
 - Java 8 or newer on your PATH, for the face (optional). A JDK lets Milo compile the face itself on first run.
 
 ```bash
-git clone https://github.com/TanishBansal2009/M.I.L.O..git
+git clone https://github.com/TanishBansal2009/M.I.L.O..git MILO
 cd MILO
 
 python -m venv .venv
