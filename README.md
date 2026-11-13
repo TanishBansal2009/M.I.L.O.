@@ -1,156 +1,162 @@
 # M.I.L.O. — Machine Intelligent Language Operator
 
-**Authored By:** Tanish Bansal
+**Authored by:** Tanish Bansal  
+**Status:** v0.1, early release. Under active development.
 
----
+<!-- Add a screenshot or short GIF of the face and a chat session here. -->
 
-## Introduction
+M.I.L.O. is a friendly AI assistant you talk to from the terminal. It chats with a warm, playful personality, handles a few everyday tasks instantly without calling the AI, and has an animated face that stays in the corner of your screen.
 
-M.I.L.O. (Machine Intelligent Language Operator) is a conversational AI assistant designed to interact with users through natural language. It aims to provide information, assist with tasks, and deliver an interactive and personalized experience.
+It is built with Python and the Google Gemini API, and the face is a small Java Swing program that Python starts as a separate process.
 
-Unlike traditional text-based AI assistants, M.I.L.O. incorporates a graphical facial interface, giving its conversational experience a visual identity. Its architecture combines Python-based conversational intelligence with a Java Swing-based graphical interface.
+## The story
 
-Currently, M.I.L.O. supports text-based conversations and features an animated digital face. Its development focuses on creating a responsive, intelligent, and extensible personal AI assistant.
+At 11, I watched *Big Hero 6* and wanted to build a robot like Baymax. Years later I built ZEN, a Jarvis-style assistant with weather, news, reminders and email. The more features I added, the slower it got, so I scrapped most of them and rebuilt it around one idea: be fast and reliable first. That rebuild is M.I.L.O.
 
-## Core Functionalities
+The long-term goal is an AI that can exist beyond a screen. This repository is the first step.
 
-M.I.L.O.'s current architecture is built around the following components:
+## What it can do today
 
-### 1. Natural Language Understanding (NLU)
+| Say something like | What happens |
+|---|---|
+| `what time is it`, `what's the date` | Answers instantly, without calling the AI |
+| `open youtube`, `open github` | Opens the site from a built-in list of about 100 sites |
+| `open <any other site>` | Looks the site up with the AI, then asks you to confirm before opening it |
+| `search for python tutorials` | Opens a Google search |
+| `search youtube for lofi music` | Searches YouTube (also Wikipedia, Amazon, Flipkart, GitHub and Google Maps) |
+| `remember that my exam is on Friday` | Saves it to a local file and uses it in later answers |
+| `what do you remember`, `forget my exam`, `forget everything` | Lists, removes or clears saved memories |
+| anything else | Normal conversation with the AI |
+| `bye`, `quit`, `exit` | Closes M.I.L.O. and its face |
 
-NLU is fundamental to M.I.L.O.'s conversational capabilities. It enables the assistant to interpret and understand user input.
+## How it works
 
-This involves several important aspects:
-
-- **Intent Recognition:** Identifying the user's goal or desired action. For example, if a user asks, "What's the weather like in London?", the intent is to retrieve weather information.
-- **Entity Extraction:** Identifying relevant information within the user's input. In the weather example, London is the location entity.
-- **Contextual Interpretation:** Understanding the meaning of messages based on the surrounding conversation.
-
-### 2. Dialogue Management
-
-Dialogue management controls the flow of conversations, ensuring coherent and meaningful interactions.
-
-It handles:
-
-- **Context Maintenance:** Retaining conversational context to understand follow-up questions and references.
-- **Conversation Flow:** Managing the interaction between the user and M.I.L.O.
-- **Dialogue State Management:** Maintaining the current state of the conversation, such as waiting for input or generating a response.
-
-### 3. Conversational Intelligence
-
-M.I.L.O. uses AI-powered language processing to generate relevant and contextually appropriate responses.
-
-Its conversational capabilities focus on:
-
-- Understanding natural language queries.
-- Generating human-readable responses.
-- Maintaining conversational continuity.
-- Adapting responses according to the context of the interaction.
-
-### 4. Text-Based Interaction
-
-M.I.L.O. currently operates through a text-based conversational interface.
-
-Users can communicate with the assistant by entering messages, receiving generated responses, and continuing conversations through a conversational workflow.
-
-Text-based interaction serves as the foundation for future multimodal capabilities.
-
-### 5. Graphical Facial Interface
-
-One of M.I.L.O.'s distinguishing features is its animated graphical face.
-
-The facial interface is developed using Java Swing and operates independently from the Python conversational engine.
-
-Its current capabilities include:
-
-- **Animated Eyes:** Two elliptical eyes connected by a horizontal bridge.
-- **Blinking Animation:** Periodic eye movements that simulate natural blinking.
-- **Always-on-Top Display:** Keeps M.I.L.O.'s face visible above other application windows.
-- **Custom Window Positioning:** Positions the face in the top-right corner of the screen.
-- **Interactive Controls:** Provides a right-click menu to close the interface.
-
-The graphical interface gives M.I.L.O. a recognizable visual identity and establishes the foundation for future expression-based interactions.
-
-## Architecture
-
-M.I.L.O.'s architecture follows a modular approach, separating conversational intelligence from graphical representation.
-
-### Conversational Pipeline
+Every message goes through the same path:
 
 ```text
-User Input (Text)
-       |
-       v
-Natural Language Processing
-       |
-       v
-Dialogue Management
-       |
-       v
-AI Response Generation
-       |
-       v
-M.I.L.O. Output (Text)
+Your message
+     |
+     v
+Skills, in order (time and date -> memory -> search -> open website)
+     |   the first skill that recognises the message answers it
+     |
+     v  nobody recognised it
+Gemini chat (keeps the conversation history)
 ```
 
-### Graphical Interface Pipeline
+Design choices:
+
+- **Local first.** Skills that need no AI run before anything calls the API, so common tasks are instant.
+- **Strict matching.** Each skill checks that a sentence is really a command. "open youtube" opens a site, but "how do I open a toy car" goes to normal chat.
+- **A lighter model for lookups.** Unknown site names use a smaller, faster model than the one used for conversation.
+- **Ask before acting on a guess.** Sites found by the AI are only opened after you confirm.
+- **Skills cannot crash Milo.** A skill that fails is skipped, and the next one (or the chat) takes over.
+- **The brain and the screen are separate.** The engine never prints or reads input directly. Everything goes through an interface module, so a chat window or voice can be added without changing the engine.
+- **The face is its own program.** It runs in a separate Java process and closes when Milo exits.
+
+## The face
+
+- Two animated eyes with a blinking animation
+- Always on top of other windows, in the top-right corner of the screen
+- Right-click the face and choose Close to close it
+
+If Java is not available, Milo still works and prints a `[face]` message explaining why the face did not start.
+
+## Installation
+
+You need:
+
+- Python 3.10 or newer
+- A Gemini API key from [Google AI Studio](https://aistudio.google.com)
+- Java 8 or newer on your PATH, for the face (optional). A JDK lets Milo compile the face itself on first run.
+
+```bash
+git clone <your-repository-url>
+cd MILO
+
+python -m venv .venv
+# Windows:
+.venv\Scripts\activate
+# macOS / Linux:
+source .venv/bin/activate
+
+pip install -r requirements.txt
+```
+
+Create your settings file by copying `.env.example` to a new file named `.env`, then add your key:
 
 ```text
-Python Application
-       |
-       v
-Java Process Management
-       |
-       v
-Java Swing Interface
-       |
-       v
-Animated Facial Display
+GEMINI_API_KEY=your_key_here
 ```
 
-### Technical Implementation
+Run it from the project folder:
 
-- **Primary Programming Language:** Python
-- **Graphical Interface:** Java Swing
-- **Java Integration:** Python `subprocess` module
-- **Java Compilation:** Java Development Kit (JDK)
-- **AI Integration:** Google Gemini API / configured language model
-- **Conversation Management:** Python-based context and conversation handling
-- **Data Storage:** JSON-based storage for supported application data
-- **Configuration Management:** Environment variables using `dotenv`
-- **Process Management:** Python subprocess handling for launching and controlling the Java interface
+```bash
+python main.py
+```
 
-## Enhancements and Advanced Features
+### Settings
 
-The following enhancements represent potential directions for M.I.L.O.'s continued development:
+All settings go in `.env`. Only the API key is required.
 
-- **Voice Interaction:** Integrating speech recognition to enable voice-based conversations.
-- **Text-to-Speech:** Enabling M.I.L.O. to communicate through synthesized speech.
-- **Dynamic Facial Expressions:** Introducing expressions such as happiness, curiosity, confusion, and concentration.
-- **Facial State Synchronization:** Connecting the graphical interface with the conversational engine so that facial expressions respond to M.I.L.O.'s current activity.
-- **Personalization:** Learning user preferences to deliver a more tailored conversational experience.
-- **Multimodal Interaction:** Incorporating additional interaction methods, including vision and other input modalities.
-- **Contextual Awareness:** Using relevant environmental information, such as time and location, to improve responses.
-- **Knowledge Base Integration:** Connecting M.I.L.O. to external knowledge sources for more comprehensive information retrieval.
-- **Multilingual Support:** Enabling conversations in multiple languages.
-- **Emotional Intelligence:** Incorporating sentiment analysis to make interactions more contextually sensitive.
-- **Proactive Assistance:** Providing useful suggestions and assistance when appropriate.
-- **Service Integration:** Connecting M.I.L.O. with external applications and services.
+| Variable | Default | Purpose |
+|---|---|---|
+| `GEMINI_API_KEY` | none | Your Gemini API key (required) |
+| `MILO_USER_NAME` | `there` | The name Milo uses for you |
+| `GEMINI_MODEL` | `gemini-3.6-flash` | Model used for conversation |
+| `GEMINI_LOOKUP_MODEL` | `gemini-3.5-flash-lite` | Lighter model used for site lookups |
+| `MILO_SHOW_FACE` | `1` | Set to `0` to run without the face |
+| `MILO_DEBUG` | `0` | Set to `1` to show skill errors |
+| `MILO_DEBUG_TIMING` | `0` | Set to `1` to show response times |
 
-## Development Process
+Model names change over time, so check the Gemini documentation if one stops working.
 
-M.I.L.O.'s development follows an iterative and modular approach:
+## Project structure
 
-1. **Define Scope:** Establish the assistant's objectives, capabilities, and intended functionality.
-2. **Conversational Engine:** Develop the text-based conversational system and integrate an AI language model.
-3. **Dialogue Management:** Implement context maintenance and conversation-state handling.
-4. **Graphical Interface Development:** Create M.I.L.O.'s visual identity using Java Swing.
-5. **Python–Java Integration:** Establish communication and process management between the Python application and Java interface.
-6. **Integration and Testing:** Combine the conversational engine and graphical interface while testing their independent and combined functionality.
-7. **Feature Expansion:** Gradually introduce voice interaction, dynamic facial expressions, and additional capabilities.
-8. **Optimization:** Improve responsiveness, modularity, reliability, and overall user experience.
-9. **Continuous Improvement:** Evaluate performance, incorporate feedback, and expand M.I.L.O.'s capabilities.
+```text
+MILO/
+├── main.py                 Starts the face and the engine
+├── .env.example            Template for your settings
+├── config/settings.py      Reads settings from .env
+├── core/engine.py          Milo's brain: skills, chat and memory
+├── interfaces/
+│   ├── text_io.py          Terminal input and output
+│   ├── face.py             Starts and stops the Java face
+│   ├── face_java/Face.java The animated face
+│   └── chat_java/          Chat window prototype (not connected yet)
+├── skills/
+│   ├── time_date.py
+│   ├── memory.py
+│   ├── search.py
+│   ├── open_website.py
+│   ├── sites.py            Built-in list of known websites
+│   └── common.py           Helpers shared by the skills
+└── data/                   Created on first use, ignored by Git
+```
 
----
+To add a skill, write a function that takes the user's text and returns a reply, or `None` if the message is not for it, then add one line to the skills list in `core/engine.py`.
 
-**M.I.L.O. — More than a conversational interface; a foundation for a personalized AI companion.**
+## Privacy and limitations
+
+- Your messages, and anything you ask Milo to remember, are sent to the Gemini API. Do not store passwords or private information.
+- Memories are saved as plain text in `data/memory.json` on your computer. That folder is excluded from Git.
+- Forgetting a memory removes it from the file and from Milo's instructions. If it was already mentioned in the current conversation, Milo may still recall it until you restart.
+- Commands are recognised by rules, not by a trained model, so unusual phrasings may fall through to normal chat.
+- Milo needs an internet connection and an API key to talk.
+- Developed and tested on Windows. macOS and Linux should work but are untested.
+
+## Roadmap
+
+- Make the face react to Milo (thinking, talking)
+- A chat window in place of the terminal
+- Replace keyword rules with a small intent classifier
+- Voice input and output
+- More skills
+
+## Credits
+
+M.I.L.O. is an independent hobby project inspired by Baymax from *Big Hero 6*. It is not affiliated with or endorsed by Disney.
+
+## License
+
+See the [LICENSE](LICENSE) file.
