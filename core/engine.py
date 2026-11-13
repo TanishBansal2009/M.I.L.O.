@@ -1,10 +1,11 @@
+import atexit
 import os
 
 from google import genai
 from google.genai import types
 
 from config.settings import GEMINI_API_KEY, GEMINI_MODEL, GEMINI_LOOKUP_MODEL, USER_NAME, MILO_SYSTEM_INSTRUCTION, SHOW_FACE
-from interfaces.face import show_face
+from interfaces.face import show_face, hide_face
 from interfaces.text_io import milo_speak, milo_speak_stream, get_user_input, ask_yes_no
 from skills.open_website import try_handle_open_site
 from skills.search import try_handle_search
@@ -33,10 +34,8 @@ def try_skills(skills: list, user_input: str) -> str | None:
 
 
 def remember_skill_action(notes: list, user_input: str, reply: str) -> None:
-    """Skills answer without the chat model, so the chat never sees those
-    messages. We keep a short note and attach it to the next chat message."""
     notes.append(f'The user said "{user_input}" and you handled it yourself, replying "{reply}".')
-    del notes[:-3]  
+    del notes[:-3]
 
 
 def add_skill_context(user_input: str, notes: list) -> str:
@@ -55,7 +54,8 @@ def run():
     )
 
     if SHOW_FACE:
-        show_face()
+        face_process = show_face()
+        atexit.register(hide_face, face_process)
 
     skills = [
         ("time_date", lambda text: try_handle_time_date(text)),
@@ -96,7 +96,7 @@ def run():
 
         try:
             milo_speak_stream(chat, add_skill_context(user_input, skill_notes))
-            skill_notes.clear()  
+            skill_notes.clear()
         except KeyboardInterrupt:
             print()
             milo_speak("Okay, I'll stop talking!")
