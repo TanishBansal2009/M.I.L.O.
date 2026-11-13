@@ -7,6 +7,10 @@ M.I.L.O. is a friendly AI assistant you talk to from the terminal. It chats with
 
 It is built with Python and the Google Gemini API, and the face is a small Java Swing program that Python starts as a separate process.
 
+
+![M.I.L.O. Icon](screenshot/Icon_MILO.png)
+
+
 ## The story
 
 At 11, I watched *Big Hero 6* and wanted to build a robot like Baymax. Years later I built ZEN, a Jarvis-style assistant with weather, news, reminders and email. The more features I added, the slower it got, so I scrapped most of them and rebuilt it around one idea: be fast and reliable first. That rebuild is M.I.L.O.
