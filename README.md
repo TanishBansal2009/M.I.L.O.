@@ -65,7 +65,6 @@ Its current capabilities include:
 
 - **Animated Eyes:** Two elliptical eyes connected by a horizontal bridge.
 - **Blinking Animation:** Periodic eye movements that simulate natural blinking.
-- **Draggable Interface:** Allows the user to reposition the facial window.
 - **Always-on-Top Display:** Keeps M.I.L.O.'s face visible above other application windows.
 - **Custom Window Positioning:** Positions the face in the top-right corner of the screen.
 - **Interactive Controls:** Provides a right-click menu to close the interface.
