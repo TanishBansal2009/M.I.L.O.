@@ -3,8 +3,6 @@
 **Authored by:** Tanish Bansal  
 **Status:** v0.1, early release. Under active development.
 
-<!-- Add a screenshot or short GIF of the face and a chat session here. -->
-
 M.I.L.O. is a friendly AI assistant you talk to from the terminal. It chats with a warm, playful personality, handles a few everyday tasks instantly without calling the AI, and has an animated face that stays in the corner of your screen.
 
 It is built with Python and the Google Gemini API, and the face is a small Java Swing program that Python starts as a separate process.
@@ -94,6 +92,7 @@ Run it from the project folder:
 ```bash
 python main.py
 ```
+![M.I.L.O. Screenshot](screenshot/SampleWithFaceErrorFeature.png)
 
 ### Settings
 
