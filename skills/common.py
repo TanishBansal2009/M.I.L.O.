@@ -19,8 +19,13 @@ def strip_polite_prefixes(text: str) -> str:
 
 
 def strip_polite_suffixes(text: str) -> str:
-    """'open youtube please' -> 'open youtube'."""
     for suffix in POLITE_SUFFIXES:
         if text.endswith(suffix):
             text = text.removesuffix(suffix).strip()
     return text
+
+
+def simple_text(user_input: str) -> str:
+    text = user_input.replace("\u2019", "'").replace("'", "").lower().replace("milo,", "milo")
+    text = " ".join(text.split()).rstrip("?!. ")
+    return strip_polite_suffixes(strip_polite_prefixes(text))

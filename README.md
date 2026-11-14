@@ -3,7 +3,7 @@
 **Authored by:** Tanish Bansal  
 **Status:** v0.1, early release. Under active development.
 
-M.I.L.O. is a friendly AI assistant you talk to from the terminal. It chats with a warm, playful personality, handles a few everyday tasks instantly without calling the AI, and has an animated face that stays in the corner of your screen.
+M.I.L.O. is a friendly AI assistant you talk to from the terminal. It chats with a warm, playful personality, handles everyday tasks instantly without calling the AI, and has an animated face that stays in the corner of your screen.
 
 It is built with Python and the Google Gemini API, and the face is a small Java Swing program that Python starts as a separate process.
 
@@ -13,7 +13,7 @@ It is built with Python and the Google Gemini API, and the face is a small Java 
 
 ## The story
 
-At the age of 11 years, I watched *Big Hero 6* and wanted to build a robot like Baymax. Years later I built [ZEN](https://github.com/TanishBansal2009/ZenithEnhancedNexus.git), a Jarvis-style assistant with weather, news, reminders and email. The more features I added, the slower it got, so I scrapped most of them and rebuilt it around one idea: be fast and reliable first. That rebuild is M.I.L.O.
+At 11, I watched *Big Hero 6* and wanted to build a robot like Baymax. Years later I built ZEN, a Jarvis-style assistant with weather, news, reminders and email. The more features I added, the slower it got, so I scrapped most of them and rebuilt it around one idea: be fast and reliable first. That rebuild is M.I.L.O.
 
 The long-term goal is an AI that can exist beyond a screen. This repository is the first step.
 
@@ -22,6 +22,8 @@ The long-term goal is an AI that can exist beyond a screen. This repository is t
 | Say something like | What happens |
 |---|---|
 | `what time is it`, `what's the date` | Answers instantly, without calling the AI |
+| `volume up`, `turn it down a little`, `make it louder`, `mute` | Changes the system volume (Windows only) |
+| `weather`, `weather in London`, `weather tomorrow` | Current weather and today's or tomorrow's forecast |
 | `open youtube`, `open github` | Opens the site from a built-in list of about 100 sites |
 | `open <any other site>` | Looks the site up with the AI, then asks you to confirm before opening it |
 | `search for python tutorials` | Opens a Google search |
@@ -39,7 +41,7 @@ Every message goes through the same path:
 Your message
      |
      v
-Skills, in order (time and date -> memory -> search -> open website)
+Skills, in order (time and date -> volume -> memory -> weather -> search -> open website)
      |   the first skill that recognises the message answers it
      |
      v  nobody recognised it
@@ -49,12 +51,13 @@ Gemini chat (keeps the conversation history)
 Design choices:
 
 - **Local first.** Skills that need no AI run before anything calls the API, so common tasks are instant.
-- **Strict matching.** Each skill checks that a sentence is really a command. "open youtube" opens a site, but "how do I open a toy car" goes to normal chat.
+- **Strict matching.** Each skill checks that a sentence is really a command. "open youtube" opens a site, but "how do I open a toy car" goes to normal chat, and "turn the heater up" never touches the volume.
 - **A lighter model for lookups.** Unknown site names use a smaller, faster model than the one used for conversation.
 - **Ask before acting on a guess.** Sites found by the AI are only opened after you confirm.
 - **Skills cannot crash Milo.** A skill that fails is skipped, and the next one (or the chat) takes over.
 - **The brain and the screen are separate.** The engine never prints or reads input directly. Everything goes through an interface module, so a chat window or voice can be added without changing the engine.
 - **The face is its own program.** It runs in a separate Java process and closes when Milo exits.
+- **A usage log for later.** Milo records what you type and which skill answered, so the keyword rules can one day be replaced by a trained classifier using real examples.
 
 ## The face
 
@@ -106,9 +109,12 @@ All settings go in `.env`. Only the API key is required.
 |---|---|---|
 | `GEMINI_API_KEY` | none | Your Gemini API key (required) |
 | `MILO_USER_NAME` | `there` | The name Milo uses for you |
+| `MILO_CITY` | none | Your city, used when you ask for the weather without naming one |
+| `MILO_TEMP_UNIT` | `celsius` | Set to `fahrenheit` for °F and mph |
 | `GEMINI_MODEL` | `gemini-3.6-flash` | Model used for conversation |
 | `GEMINI_LOOKUP_MODEL` | `gemini-3.5-flash-lite` | Lighter model used for site lookups |
 | `MILO_SHOW_FACE` | `1` | Set to `0` to run without the face |
+| `MILO_LOG` | `1` | Set to `0` to turn off the usage log |
 | `MILO_DEBUG` | `0` | Set to `1` to show skill errors |
 | `MILO_DEBUG_TIMING` | `0` | Set to `1` to show response times |
 
@@ -118,23 +124,29 @@ Model names change over time, so check the Gemini documentation if one stops wor
 
 ```text
 MILO/
-├── main.py                 Starts the face and the engine
-├── .env.example            Template for your settings
-├── config/settings.py      Reads settings from .env
-├── core/engine.py          Milo's brain: skills, chat and memory
+├── main.py                  Starts the face and the engine
+├── .env.example             Template for your settings
+├── config/settings.py       Reads settings from .env
+├── core/
+│   ├── engine.py            Milo's brain: skills, chat and memory
+│   └── interaction_log.py   Writes the local usage log
 ├── interfaces/
-│   ├── text_io.py          Terminal input and output
-│   ├── face.py             Starts and stops the Java face
-│   ├── face_java/Face.java The animated face
-│   └── chat_java/          Chat window prototype (not connected yet)
+│   ├── text_io.py           Terminal input and output
+│   ├── face.py              Starts and stops the Java face
+│   ├── face_java/Face.java  The animated face
+│   └── chat_java/           Chat window prototype (not connected yet)
 ├── skills/
+│   ├── common.py            Helpers shared by the skills
 │   ├── time_date.py
 │   ├── memory.py
-│   ├── search.py
-│   ├── open_website.py
-│   ├── sites.py            Built-in list of known websites
-│   └── common.py           Helpers shared by the skills
-└── data/                   Created on first use, ignored by Git
+│   ├── weather.py
+│   ├── system/
+│   │   └── volume.py
+│   └── web/
+│       ├── open_website.py
+│       ├── search.py
+│       └── sites.py         Built-in list of known websites
+└── data/                    Created on first use, ignored by Git
 ```
 
 To add a skill, write a function that takes the user's text and returns a reply, or `None` if the message is not for it, then add one line to the skills list in `core/engine.py`.
@@ -143,20 +155,26 @@ To add a skill, write a function that takes the user's text and returns a reply,
 
 - Your messages, and anything you ask Milo to remember, are sent to the Gemini API. Do not store passwords or private information.
 - Memories are saved as plain text in `data/memory.json` on your computer. That folder is excluded from Git.
+- The usage log, `data/log.jsonl`, records the time, what you typed and which skill answered. Memory commands are logged without their text. Set `MILO_LOG=0` to turn it off.
+- Weather lookups send the city name to Open-Meteo, a free weather service that needs no account or key.
 - Forgetting a memory removes it from the file and from Milo's instructions. If it was already mentioned in the current conversation, Milo may still recall it until you restart.
 - Commands are recognised by rules, not by a trained model, so unusual phrasings may fall through to normal chat.
+- Volume control works on Windows only. Windows only lets Milo flip the mute switch, so "mute" and "unmute" both toggle it.
 - Milo needs an internet connection and an API key to talk.
 - Developed and tested on Windows. macOS and Linux should work but are untested.
 
 ## Roadmap
 
 - Make the face react to Milo (thinking, talking)
+- Open and control apps
 - A chat window in place of the terminal
 - Replace keyword rules with a small intent classifier
 - Voice input and output
 - More skills
 
 ## Credits
+
+Weather data by [Open-Meteo.com](https://open-meteo.com).
 
 M.I.L.O. is an independent hobby project inspired by Baymax from *Big Hero 6*. It is not affiliated with or endorsed by Disney.
 

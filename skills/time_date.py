@@ -1,5 +1,7 @@
 from datetime import datetime
 
+from skills.common import simple_text
+
 TIME_PHRASES = (
     "what time is it", "what time it is", "whats the time", "what is the time",
     "whats the current time", "what is the current time", "current time",
@@ -11,17 +13,12 @@ DATE_PHRASES = (
 )
 
 
-def clean_text(text: str) -> str:
-    text = text.lower().replace("\u2019", "'").replace("'", "")
-    return text.strip(" ?!.")
-
-
 def ends_with_any(text: str, phrases: tuple) -> bool:
     return any(text.endswith(phrase) for phrase in phrases)
 
 
 def try_handle_time_date(user_input: str) -> str | None:
-    text = clean_text(user_input)
+    text = simple_text(user_input)
     now = datetime.now()
 
     if ends_with_any(text, TIME_PHRASES):

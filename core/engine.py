@@ -3,13 +3,24 @@ import os
 from google import genai
 from google.genai import types
 
-from config.settings import GEMINI_API_KEY, GEMINI_MODEL, GEMINI_LOOKUP_MODEL, USER_NAME, MILO_SYSTEM_INSTRUCTION
+from config.settings import (
+    DEFAULT_CITY, GEMINI_API_KEY, GEMINI_LOOKUP_MODEL, GEMINI_MODEL,
+    LOG_INTERACTIONS, MILO_SYSTEM_INSTRUCTION, TEMP_UNIT, USER_NAME,
+)
+from core.interaction_log import log_interaction
 from skills.memory import Memory, try_handle_memory
-from skills.open_website import try_handle_open_site
-from skills.search import try_handle_search
+from skills.web.open_website import try_handle_open_site
+from skills.web.search import try_handle_search
+from skills.system.volume import try_handle_volume
 from skills.time_date import try_handle_time_date
+from skills.weather import try_handle_weather
 
-EXIT_WORDS = {"exit", "quit", "bye", "goodbye"}
+EXIT_WORDS = {"exit", "quit", "bye", "goodbye", "good bye", "bye bye", "see you", "see you later"}
+
+
+def is_exit(text: str) -> bool:
+    cleaned = text.lower().strip(" .!?,")
+    return cleaned.removesuffix(" milo").strip(" ,") in EXIT_WORDS
 
 
 def run_skill(name: str, skill, user_input: str) -> str | None:
@@ -23,17 +34,15 @@ def run_skill(name: str, skill, user_input: str) -> str | None:
         return None
 
 
-def try_skills(skills: list, user_input: str) -> str | None:
+def try_skills(skills: list, user_input: str) -> tuple[str, str] | None:
     for name, skill in skills:
         reply = run_skill(name, skill, user_input)
         if reply is not None:
-            return reply
+            return name, reply
     return None
 
 
 def remember_skill_action(notes: list, user_input: str, reply: str) -> None:
-    """Skills answer without the chat model, so the chat never sees those
-    messages. We keep a short note and attach it to the next chat message."""
     notes.append(f'The user said "{user_input}" and you handled it yourself, replying "{reply}".')
     del notes[:-3]
 
@@ -46,6 +55,7 @@ def add_skill_context(user_input: str, notes: list) -> str:
 
 
 class Milo:
+
     def __init__(self, ui):
         self.ui = ui
         self.client = genai.Client(api_key=GEMINI_API_KEY)
@@ -55,7 +65,9 @@ class Milo:
         self.skill_notes = []
         self.skills = [
             ("time_date", lambda text: try_handle_time_date(text)),
+            ("volume", lambda text: try_handle_volume(text)),
             ("memory", lambda text: try_handle_memory(text, self.memory, ui.ask_yes_no)),
+            ("weather", lambda text: try_handle_weather(text, DEFAULT_CITY, TEMP_UNIT)),
             ("search", lambda text: try_handle_search(text)),
             ("open_website", lambda text: try_handle_open_site(text, self.client, GEMINI_LOOKUP_MODEL, ui.ask_yes_no)),
         ]
@@ -94,17 +106,20 @@ class Milo:
             self.ui.milo_speak(f"Hey {USER_NAME}, I'm Milo! (had trouble reaching my brain just now: {e})")
 
     def handle(self, user_input: str) -> None:
-        skill_reply = try_skills(self.skills, user_input)
-        if skill_reply is not None:
+        result = try_skills(self.skills, user_input)
+        if result is not None:
+            skill_name, skill_reply = result
             self.ui.milo_speak(skill_reply)
             remember_skill_action(self.skill_notes, user_input, skill_reply)
             self.refresh_chat_if_memory_changed()
+            log_interaction(user_input, skill_name, LOG_INTERACTIONS)
             return
 
         try:
             prompt = add_skill_context(user_input, self.skill_notes)
             self.ui.milo_speak_stream(self.stream_reply(prompt))
             self.skill_notes.clear()
+            log_interaction(user_input, "chat", LOG_INTERACTIONS)
         except KeyboardInterrupt:
             self.ui.milo_speak("Okay, I'll stop talking!")
         except Exception as e:
@@ -125,7 +140,7 @@ def run(ui) -> None:
         if not user_input:
             continue
 
-        if user_input.lower() in EXIT_WORDS:
+        if is_exit(user_input):
             ui.milo_speak("See you soon! Take care.")
             break
 
